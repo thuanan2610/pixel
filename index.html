@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LED Text Scrolling</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: black;
+            color: white;
+        }
+
+        .container {
+            text-align: center;
+        }
+
+        #pixelGrid {
+            display: grid;
+            grid-template-columns: repeat(40, 20px); /* Lưới 40x20 */
+            grid-template-rows: repeat(20, 20px);
+            gap: 4px; /* Khoảng cách giữa các pixel */
+        }
+
+        .pixel {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: #222;
+        }
+
+        .active {
+            background-color: pink !important;
+        }
+
+        input, button {
+            margin: 10px;
+        }
+
+        /* Hiệu ứng nhấp nháy tiêu đề */
+        @keyframes blink {
+            0%, 100% {
+                color: white;
+            }
+            50% {
+                color: yellow;
+            }
+        }
+
+        h1 {
+            animation: blink 1s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>DTA mời bạn nhập</h1>
+	
+        <input type="text" id="inputText" placeholder="Nhập text" />
+        <button onclick="runText()">Chạy</button>
+        <button onclick="stopText()">Dừng</button>
+        <div id="pixelGrid"></div>
+    </div>
+
+    <script>
+        const gridWidth = 40; // Số pixel theo chiều ngang (40 điểm)
+        const gridHeight = 20; // Số pixel theo chiều dọc (20 điểm)
+        const textHeight = 10; // Chiều cao chữ
+        const pixelGrid = document.getElementById('pixelGrid');
+        const grid = [];
+        const fontWidth = 8; // Chiều rộng mỗi ký tự
+        const fontHeight = 10; // Chiều cao mỗi ký tự
+        let interval;
+
+        // Tạo lưới pixel
+        for (let i = 0; i < gridWidth * gridHeight; i++) {
+            const pixel = document.createElement('div');
+            pixel.classList.add('pixel');
+            pixelGrid.appendChild(pixel);
+            grid.push(pixel);
+        }
+
+        // Font LED: Chữ cái đầy đủ (A-Z, a-z)
+
+ const font = {
+    "A": [
+        "00111100",
+        "01000010",
+        "10000001",
+        "10000001",
+        "11111111",
+        "10000001",
+        "10000001",
+        "10000001",
+        "10000001",
+        "10000001"
+    ],
+    "B": [
+        "11111100",
+        "10000010",
+        "10000010",
+        "11111100",
+        "10000010",
+        "10000010",
+        "10000010",
+        "10000010",
+        "10000010",
+        "11111100"
+    ],
+    "C": [
+        "00111100",
+        "01000010",
+        "10000001",
+        "10000000",
+        "10000000",
+        "10000000",
+        "10000001",
+        "01000010",
+        "00111100",
+        "00000000"
+    ],
+    "D": [
+        "11111100",
+        "10000010",
+        "10000001",
+        "10000001",
+        "10000001",
+        "10000001",
+        "10000001",
+        "10000010",
+        "11111100",
+        "00000000"
+    ],
+    "E": [
+        "11111111",
+        "10000000",
+        "10000000",
+        "11111100",
+        "10000000",
+        "10000000",
+        "10000000",
+        "11111111",
+        "00000000",
+        "00000000"
+    ],
+    "F": [
+        "11111111",
+        "10000000",
+        "10000000",
+        "11111100",
+        "10000000",
+        "10000000",
+        "10000000",
+        "10000000",
+        "00000000",
+        "00000000"
+    ],
+    "G": [
+        "00111110",
+        "01000010",
+        "10000001",
+        "10000000",
+        "10001111",
+        "10000001",
+        "10000001",
+        "01000010",
+        "00111110",
+        "00000000"
+    ],
+    "H": [
+        "10000001",
+        "10000001",
+        "10000001",
+        "11111111",
+        "10000001",
+        "10000001",
+        "10000001",
+        "10000001",
+        "10000001",
+        "00000000"
+    ],
+    "I": [
+        "01111110",
+        "00011000",
+        "00011000",
+        "00011000",
+        "00011000",
+        "00011000",
+        "00011000",
+        "01111110",
+        "00000000",
+        "00000000"
+    ],
+    "J": [
+        "00011111",
+        "00000110",
+        "00000110",
+        "00000110",
+        "00000110",
+        "10000110",
+        "10000110",
+        "01001100",
+        "00111000",
+        "00000000"
+    ],
+    "K": [
+        "10000010",
+        "10000100",
+        "10001000",
+        "11110000",
+        "10010000",
+        "10001000",
+        "10000100",
+        "10000010",
+        "10000001",
+        "00000000"
+    ],
+    "L": [
+        "10000000",
+        "10000000",
+        "10000000",
+        "10000000",
+        "10000000",
+        "10000000",
+        "10000000",
+        "11111111",
+        "00000000",
+        "00000000"
+    ],
+    "M": [
+        "10000001",
+        "11000011",
+        "11100111",
+        "10101001",
+        "10101001",
+        "10000001",
+        "10000001",
+        "10000001",
+        "10000001",
+        "00000000"
+    ],
+    "N": [
+        "10000001",
+        "11000001",
+        "11100001",
+        "10110001",
+        "10011001",
+        "10001101",
+        "10000111",
+        "10000011",
+        "10000001",
+        "00000000"
+    ],
+    "O": [
+        "00111100",
+        "01000010",
+        "10000001",
+        "10000001",
+        "10000001",
+        "10000001",
+        "10000001",
+        "01000010",
+        "00111100",
+        "00000000"
+    ],
+    "P": [
+        "11111100",
+        "10000010",
+        "10000010",
+        "11111100",
+        "10000000",
+        "10000000",
+        "10000000",
+        "10000000",
+        "00000000",
+        "00000000"
+    ],
+    "Q": [
+        "00111100",
+        "01000010",
+        "10000001",
+        "10000001",
+        "10000001",
+        "10001001",
+        "10000101",
+        "01000010",
+        "00111101",
+        "00000000"
+    ],
+    "R": [
+        "11111100",
+        "10000010",
+        "10000010",
+        "11111100",
+        "10100000",
+        "10010000",
+        "10001000",
+        "10000100",
+        "10000010",
+        "00000000"
+    ],
+    "S": [
+        "00111110",
+        "01000000",
+        "10000000",
+        "10000000",
+        "01111100",
+        "00000010",
+        "00000001",
+        "10000001",
+        "01111110",
+        "00000000"
+    ],
+    "T": [
+        "11111111",
+        "00011000",
+        "00011000",
+        "00011000",
+        "00011000",
+        "00011000",
+        "00011000",
+        "00011000",
+        "00000000",
+        "00000000"
+    ],
+    "U": [
+        "10000001",
+        "10000001",
+        "10000001",
+        "10000001",
+        "10000001",
+        "10000001",
+        "10000001",
+        "01000010",
+        "00111100",
+        "00000000"
+    ],
+    "V": [
+        "10000001",
+        "10000001",
+        "10000001",
+        "10000001",
+        "10000001",
+        "10000001",
+        "01000010",
+        "00100100",
+        "00011000",
+        "00000000"
+    ],
+    "W": [
+        "10000001",
+        "10000001",
+        "10000001",
+        "10000001",
+        "10000001",
+        "10101001",
+        "11111111",
+        "11000011",
+        "10000001",
+        "00000000"
+    ],
+    "X": [
+        "10000001",
+        "10000001",
+        "01000010",
+        "00100100",
+        "00011000",
+        "00100100",
+        "01000010",
+        "10000001",
+        "10000001",
+        "00000000"
+    ],
+    "Y": [
+        "10000001",
+        "10000001",
+        "01000010",
+        "00100100",
+        "00011000",
+        "00011000",
+        "00011000",
+        "00011000",
+        "00000000",
+        "00000000"
+    ],
+    "Z": [
+        "11111111",
+        "00000010",
+        "00000100",
+        "00001000",
+        "00010000",
+        "00100000",
+        "01000000",
+        "10000000",
+        "11111111",
+        "00000000"
+    ],
+	" ": [
+                "00000000",
+                "00000000",
+                "00000000",
+                "00000000",
+                "00000000",
+                "00000000",
+                "00000000",
+                "00000000",
+                "00000000",
+                "00000000"
+            ]
+};
+
+
+        function renderText(text, offsetX) {
+            grid.forEach(pixel => pixel.classList.remove('active')); // Xóa pixel cũ
+
+            for (let charIndex = 0; charIndex < text.length; charIndex++) {
+                const char = font[text[charIndex]] || font[" "]; // Lấy bitmap ký tự hoặc để trống nếu không tìm thấy
+                const startCol = offsetX + charIndex * (fontWidth + 1);
+
+                for (let row = 0; row < fontHeight; row++) {
+                    const gridRow = row + (gridHeight - textHeight) / 2; // Dịch xuống giữa bảng
+                    if (gridRow >= gridHeight) continue;
+
+                    const line = char[row] || "00000000";
+                    for (let col = 0; col < fontWidth; col++) {
+                        const gridCol = startCol + col;
+                        if (gridCol < 0 || gridCol >= gridWidth) continue;
+
+                        if (line[col] === "1") {
+                            const pixelIndex = gridRow * gridWidth + gridCol;
+                            grid[pixelIndex]?.classList.add('active');
+                        }
+                    }
+                }
+            }
+        }
+
+        function runText() {
+            const inputText = document.getElementById('inputText').value || " ";
+            const scrollWidth = inputText.length * (fontWidth + 1) + gridWidth;
+            let offsetX = gridWidth;
+
+            if (interval) clearInterval(interval);
+
+            interval = setInterval(() => {
+                renderText(inputText, offsetX);
+                offsetX--;
+
+                if (offsetX < -scrollWidth) offsetX = gridWidth;
+            }, 100);
+        }
+
+        function stopText() {
+            if (interval) clearInterval(interval); // Dừng việc chạy text
+        }
+    </script>
+</body>
+</html>
